@@ -10,8 +10,7 @@ source /opt/ros/humble/setup.bash
 
 python3 webcam_subscriber.py
 
-
-#aruco_sub.py
+# aruco_sub.py
 
 source /opt/ros/humble/setup.bash
 
