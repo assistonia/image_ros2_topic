@@ -43,35 +43,75 @@ python3 yolo_sub.py
 
 4. TurtleBot3 제어 및 객체 인식 통합 시스템
 
-#### TurtleBot3 기본 제어 (`burgermove.py`)
-- 기본 이동 명령:
-  - 전진/후진 (`move_forward`): 선속도 0.2m/s
-  - 회전 (`rotate`): 각속도 0.5rad/s
-  - 정지 (`stop`)
-- 타이머 기반 명령 실행 (0.1초 간격)
-- 이동 시간 설정 가능한 제어 함수
+#### TurtleBot3 제어 시스템 (`burgermove.py`)
 
-#### 자동 주행 및 인식 시퀀스
-1. 초기 이동:
-   - 3초간 전진 이동
-   - 선속도: 0.2m/s
+##### 시스템 구성
+```python
+from detect import WebcamSubscriber
 
-2. 정지 시 객체 감지 (`detect.py`):
-   - YOLO 기반 객체 감지 실행
-   - 5초간 주변 객체 스캔
-   - 감지된 객체 자동 저장:
-     - 위치: `detect` 디렉토리
-     - 파일명: `[객체명].jpg`
-     - 중복 객체 제외
+class TurtleBotController(Node):
+    def __init__(self):
+        super().__init__('turtlebot_controller')
+        self.publisher = self.create_publisher(Twist, '/cmd_vel', 10)
+        self.webcam_subscriber = WebcamSubscriber()  # YOLO 객체 감지 통합
+```
 
-3. 회전 및 추가 스캔:
-   - 2초간 제자리 회전
-   - 각속도: 0.5rad/s
-   - 새로운 시야에서 추가 객체 감지 가능
+##### 자동 주행 시퀀스
+```python
+def main(args=None):
+    try:
+        # 1. 전진 이동
+        controller.move_forward(linear_speed=0.2, duration=3.0)
+        
+        # 2. 물체 감지 수행
+        controller.webcam_subscriber.detect(5)  # 5초간 감지
+        
+        # 3. 회전 이동
+        controller.rotate(angular_speed=0.5, duration=2.0)
+        
+        # 4. 안전 정지
+        controller.stop(duration=1.0)
+    except KeyboardInterrupt:
+        controller.stop()  # 안전한 종료
+```
 
-4. 안전 정지:
-   - 모든 동작 완료 후 안전 정지
-   - 1초간 정지 상태 유지
+##### 주요 기능
+1. 이동 제어
+   - 전진/후진: `move_forward(linear_speed, duration)`
+   - 회전: `rotate(angular_speed, duration)`
+   - 정지: `stop(duration)`
+
+2. 객체 감지 통합
+   - WebcamSubscriber 클래스와 통합
+   - 정지 상태에서 자동 감지 수행
+   - 감지 완료 후 다음 동작 진행
+
+3. 안전 기능
+   - 타이머 기반 명령 실행
+   - 예외 상황 처리
+   - 안전한 종료 절차
+
+##### 동작 시퀀스
+1. 초기화 단계
+   - ROS2 노드 초기화
+   - 속도 제어 퍼블리셔 생성
+   - YOLO 객체 감지 시스템 초기화
+
+2. 주행 단계
+   - 3초간 전진 이동 (0.2m/s)
+   - 정지 후 5초간 물체 감지
+   - 2초간 회전 (0.5rad/s)
+   - 1초간 안전 정지
+
+3. 종료 단계
+   - 모든 동작 완료 후 정지
+   - 노드 정리 및 종료
+   - 시스템 자원 해제
+
+##### 에러 처리
+- 키보드 인터럽트 처리
+- 예외 상황 로깅
+- 안전한 종료 보장
 
 #### ArUco 마커 감지 (`aruco_sub.py`)
 - 4x4 ArUco 마커 실시간 감지
